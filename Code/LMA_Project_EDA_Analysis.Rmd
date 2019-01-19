@@ -1,0 +1,145 @@
+---
+title: "LMA EDA"
+author: "Rylee Iacolucci, Caitlin Howansky, Sophie"
+date: "January 14, 2019"
+output: html_document
+---
+
+```{r, include=FALSE, warning=FALSE}
+# Name: Rylee Iacolucci
+# Date: 1/9/2018
+# 
+# Description: This is the exploratory data analysis (EDA) for the LMA ECON 5300 Project.
+# For this project we've chosen to analyze .... and how it impacts ......
+# ...
+# ...
+# ...
+
+library(tidyverse)
+library(here)
+library(gridExtra)
+library(kableExtra)
+
+# tx_pop_df <- read_csv(here("Data/ss16ptx.csv"))
+tx_pop_df <- read_csv(here("Data/Person_Record_Adj.csv"))
+
+# Here I'm going to rename some columns to make doing this eda a little easier.
+# For example, PERNP really stands for Total Persons Earnings.
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::rename(RECORD_TYPE = RT,
+                HOUSING_UNIT = SERIALNO,
+                PERSON_NUMBER = SPORDER,
+                AREA_CODE = PUMA,
+                CITIZEN_STATUS = CIT,
+                WORKER_CLASS = COW,
+                EMPLOYMENT_STATUS = ESR,
+                PERSON_EARNINGS = PERNP)
+
+# This will be used to make vizualization standard
+basic_theme <- 
+  theme(legend.position = "none") +
+  theme(plot.title = element_text(size=16, face="bold", hjust=0, color="#666666")) +
+  theme(axis.title = element_text(size=12, face="bold", color="#666666")) +
+  theme(axis.title.y = element_text(angle=90)) +
+  theme(axis.title.x = element_text(hjust = .5))
+
+
+```
+
+```{r}
+summary(tx_pop_df)
+
+```
+
+#### __Summary Statistics__
+
+##### __Age__
+
+Right away I notice there is a wide range for age, however, the median and the mean are very close together. In this project it may be good to use the IQR of age, or finding where the distribution of age lies. This will help determine what range we should analyze.
+
+##### __Person Earnings__
+
+Out of 261,896 records there are 54,041 nulls. A next step will be to determine where those nulls come from. Are they from a specific employment status, or worker class? This may result in us filtering for person of a particular employment status. 
+
+```{r, fig.height=4, fig.width=12, echo=FALSE}
+employment_g_1 <- tx_pop_df %>% 
+  dplyr::select(EMPLOYMENT_STATUS) %>% 
+  dplyr::group_by(EMPLOYMENT_STATUS) %>% 
+  dplyr::summarise(TOTAL_RECORDS = n()) %>% 
+  ggplot(aes(x = as.factor(EMPLOYMENT_STATUS), y = TOTAL_RECORDS)) +
+  geom_bar(stat = 'identity', fill = '#880011', width = .75) +
+  ylab("Count Of Records") +
+  xlab("Employment Status") +
+  ggtitle("Count of Records by Employment Status") + 
+  basic_theme
+
+age_g_1 <- tx_pop_df %>% 
+  dplyr::select(AGEP) %>%
+  dplyr::filter(AGEP > 0) %>% # This filters out age less than one
+  ggplot(aes(x = AGEP)) + 
+  geom_histogram(binwidth = 5, fill = '#880011', color = 'white') +
+  basic_theme +
+  xlab("Age") +
+  ylab("Frequency") +
+  ggtitle("Histogram of Age") +
+  labs(subtitle = "Bin Width Equals 5 Years")
+
+
+grid.arrange(employment_g_1, age_g_1, ncol = 2)
+  
+  
+
+
+```
+<br>
+
+##### __Employment and Age__
+
+Looking at the cart on the left category 1, Civilian Employed at Work, accounts for the majority of the persons surveyed while category 6, not in the labor force, and null records account for the second and third highest frequencies. During the analysis we may want to choose to only filter for persons who answered 1 in this category. 
+
+Looking at the age histogram you can see there is a very large spread of the age in the dataset. This is great, but we may want to filter for person between the ages of 18 and 60. Although we should examine this more.
+
+
+#### __Adjusting For Employment Status 1__
+
+```{r, echo=FALSE, fig.align='float.right'}
+# Since we may want to just analyze person who are employed
+# we filter out any other employment code that isn't 1
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(EMPLOYMENT_STATUS == 1)
+
+age_g_2 <- tx_pop_df %>% 
+  dplyr::select(AGEP) %>%
+  dplyr::filter(AGEP > 0) %>% # This filters out age less than one
+  ggplot(aes(x = AGEP)) + 
+  geom_histogram(binwidth = 5, fill = '#880011', color = 'white') +
+  basic_theme +
+  xlab("Age") +
+  ylab("Frequency") +
+  ggtitle("Histogram of Age") +
+  labs(subtitle = "Bin Width Equals 5 Years")
+
+age_g_2
+summary(tx_pop_df)
+
+
+```
+
+In this chart you can see that there is a very wide range of earnings. In the summary statistics you can see that the 3rd quartile is much lower than the max value in the dataset. However, that max value having a higher frequency may mean that it's a null code or a did not answer code.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
