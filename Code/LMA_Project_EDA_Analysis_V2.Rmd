@@ -1,0 +1,206 @@
+---
+title: "Labor Market Analysis EDA"
+author: "Rylee Iacolucci, Sophie McDevitt, Caitlin Howansky"
+date: "January 20, 2019"
+output: word_document
+---
+
+#### __Overview__
+
+For our labor marketing analysis we've chosen to analyze Texas. Below are the research questions for this project:
+
+* In Texas, how does earnings vary by household language?
+* Does the household language earnings vary by household family type?
+
+To answer these questions we'll be analyzing a person and household data file. The person data file contains over 200,000 observations and 280 columns. To answer our research questions we were able to reduce the data file to ten columns. In the rest of this paper we'll examine this data and describe the filtering out and why it's necessary for our economic analysis.
+
+```{r, include=FALSE, warning=FALSE}
+# Name: Rylee Iacolucci
+# Date: 1/9/2018
+# 
+# Description: This is the exploratory data analysis (EDA) for the LMA ECON 5300 Project.
+# For this project we've chosen to analyze .... and how it impacts ......
+# ...
+# ...
+# ...
+
+library(tidyverse)
+library(here)
+library(gridExtra)
+library(kableExtra)
+
+# tx_pop_df <- read_csv(here("Data/ss16ptx.csv"))
+tx_pop_df <- read_csv(here("Data/Person_Record_Adj.csv"))
+tx_hh_df <- read_csv(here("Data/HH_Record_Adj.csv"))
+
+# Here I'm going to rename some columns to make doing this eda a little easier.
+# For example, PERNP really stands for Total Persons Earnings.
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::rename(RECORD_TYPE = RT,
+                HOUSING_UNIT = SERIALNO,
+                PERSON_NUMBER = SPORDER,
+                AREA_CODE = PUMA,
+                CITIZEN_STATUS = CIT,
+                WORKER_CLASS = COW,
+                EMPLOYMENT_STATUS = ESR,
+                PERSON_EARNINGS = PERNP)
+
+tx_hh_df <- tx_hh_df %>% 
+  dplyr::rename(RECORD_TYPE = RT,
+                HOUSING_UNIT = SERIALNO,
+                AREA_CODE = PUMA,
+                HOUSE_LANGUAGE = HHL,
+                FAMILY_TYPE = HHT)
+
+# This will be used to make vizualization standard
+basic_theme <- 
+  theme(legend.position = "none") +
+  theme(plot.title = element_text(size=16, face="bold", hjust=0, color="#666666")) +
+  theme(axis.title = element_text(size=12, face="bold", color="#666666")) +
+  theme(axis.title.y = element_text(angle=90)) +
+  theme(axis.title.x = element_text(hjust = .5))
+
+
+```
+
+```{r, echo=FALSE}
+summary(tx_pop_df)
+
+head(tx_pop_df, 10)
+
+
+```
+
+#### __Summary Statistics__
+
+* AGEP
+    + From the summary data you're able to see that age of people surveyed has a very wide range, while no nulls appear to be in the dataset.
+    + In our analysis we want individuals who are legally able to be fully employed. In Texas the minimum age for full employment is 14, however, by law that individual is still considered a child.
+        + Persons under 18 years old have regulations limiting the total number of hours they can work in a single week.
+        + In this analysis we will want to analyze person whom are not bind hour age regulations by the state so only person greater than 18 years old will be analyzed.
+* Employment Status
+    + In this category 1 stands for "Civilian Employed, at Work", while other codes suggest the person is currently not working full time. In this analysis we may want to filter for only persons who are currently employed and working so the results of the are not skewed by invididuals not working and/or not looking for work.
+* Person Earnings
+    + Right away we noticed there are person with zero or less earnings.
+    + According to the Bureau of Labor Statistics nearly 6.2 million workers in Texas were paid the federal minimum wage of $7.25 per hour.
+        + This would make a persons annual earnings of $15,080, without adjusting for federal and local taxes, if that person worked 40 hours a week for 52 weeks a year.
+    + Looking at the first 10 rows of data you see a lot of rounded earnings values like 60,000.
+    + In this analysis we may have to keep in mind that when individuals were filling our their income values that they may have rounded up or down.
+
+```{r, echo=FALSE, fig.width=12, fig.height=4.5}
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(EMPLOYMENT_STATUS == 1 & PERSON_EARNINGS > 15080 & AGEP >= 18) %>% 
+  dplyr::inner_join(tx_hh_df, c("HOUSING_UNIT", "AREA_CODE"))
+
+earnings_hist_1 <- tx_pop_df %>% 
+  ggplot(aes(x = PERSON_EARNINGS)) +
+  geom_histogram(binwidth = 20000, fill = "#880011", color = "white") +
+  xlab("Person Earnings") +
+  ylab("Frequency") +
+  labs(title = "Histogram of Person Earnings",
+       subtitle = "Bin Width Every $20,000") +
+  basic_theme
+
+earnings_hist_2 <- tx_pop_df %>% 
+  ggplot(aes(x = log(PERSON_EARNINGS))) +
+  geom_histogram(bins = 20, fill = "#880011", color = "white") +
+  xlab("Person Earnings") +
+  ylab("Frequency") +
+  labs(title = "Histogram of LOG of Person Earnings",
+       subtitle = "Grouped Into Twenty Bins") +
+  basic_theme
+
+
+grid.arrange(earnings_hist_1, earnings_hist_2, ncol = 2)
+
+
+
+```
+
+#### __Person Earnings__
+
+_Note: Inner joining with the household dataset on HOUSING_UNIT & AREA_CODE removed 151 observations due to NAs._
+
+
+Looking at the left histogram you can see the person earnings data is right skewed. Some person answered their earnings to exceed 500,000, which may be considered an outlier when you compare against the mean of 65,423. In this analysis we wouldn't want to exclude these values since they are not top coded and may provide useful insight in explaining our research questions. Instead we can chose to analyze the log of person earnings. As you can see applying the log function makes the data more normall distributed which may help with analyzing the variance in person earnings.
+
+
+
+```{r, echo=FALSE, fig.width=12, fig.height=4.5}
+# Here I convert the numerical answers for household languge into it's meanings.
+# This is just for the graph, which is why I don't replace the dataframe.
+hh_one <- tx_pop_df %>% 
+  dplyr::mutate(HOUSE_LANGUAGE = if_else(HOUSE_LANGUAGE == 1, "English Only",
+                                 if_else(HOUSE_LANGUAGE == 2, "Spanish",
+                                 if_else(HOUSE_LANGUAGE == 3, "Other Indo-European",
+                                 if_else(HOUSE_LANGUAGE == 4, "Asian and Pacific Island",
+                                 if_else(HOUSE_LANGUAGE == 5, "Other", "Unknown")))))) %>% 
+  dplyr::select(HOUSE_LANGUAGE) %>% 
+  dplyr::group_by(HOUSE_LANGUAGE) %>% 
+  dplyr::summarise(RECORDS = n()) %>% 
+  ggplot(aes(x = reorder(HOUSE_LANGUAGE, RECORDS), y = RECORDS)) +
+  geom_bar(fill = "#880011", color = "white", stat = "identity") +
+  ylab("Frequency") +
+  xlab("") +
+  labs(title = "Histogram of Household Language") +
+  basic_theme +
+  coord_flip()
+
+
+hh_two <- tx_pop_df %>% 
+  dplyr::mutate(FAMILY_TYPE = if_else(FAMILY_TYPE == 1, "Married Couple",
+                                 if_else(FAMILY_TYPE == 2, "Male No Wife",
+                                 if_else(FAMILY_TYPE == 3, "Female No Husband",
+                                 if_else(FAMILY_TYPE == 4, "Male Alone",
+                                 if_else(FAMILY_TYPE == 5, "Male Not Alone",
+                                 if_else(FAMILY_TYPE == 6, "Female Alone",
+                                 if_else(FAMILY_TYPE == 7, "Female Not Alone", "Unknown")))))))) %>%
+  dplyr::select(FAMILY_TYPE) %>% 
+  dplyr::group_by(FAMILY_TYPE) %>% 
+  dplyr::summarise(RECORDS = n()) %>% 
+  ggplot(aes(x = reorder(FAMILY_TYPE, RECORDS), y = RECORDS)) +
+  geom_bar(fill = "#880011", color = "white", stat = "identity") +
+  ylab("Frequency") +
+  xlab("") +
+  labs(title = "Histogram of Family Type") +
+  basic_theme +
+  coord_flip()
+
+grid.arrange(hh_one, hh_two, ncol = 2)
+
+
+
+
+
+```
+
+#### __Family Type__
+
+Both the histgrams above show the answer frequency for the household language and family type of the person surveyed. You can see english and married couple households are the majority of those surveyed. The impact of household and family types will be examined in our technical research paper.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
