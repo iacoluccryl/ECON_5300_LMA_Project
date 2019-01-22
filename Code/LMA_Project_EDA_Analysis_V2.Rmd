@@ -76,18 +76,19 @@ head(tx_pop_df, 10)
 #### __Summary Statistics__
 
 * AGEP
-    +	From the summary data you’re able to see that age of people surveyed has a very wide range, while no nulls appear to be in the dataset.
+    +	From the summary data you’re able to see the age of people surveyed has a very wide range, while no nulls appear to be in the dataset.
     + In our analysis we want individuals who are legally able to be fully employed. In Texas the minimum age for full employment is 14, however, by law that individual is still considered a child.
         + People under 18 years old have regulations limiting the total number of hours they can work in a single week.
-        + In this analysis we will want to analyze people who are not bound by hour age regulations by the state, so only people greater than 18 years old will be analyzed.
+        + In this analysis we will only analyze people who are not bound by age regulations from the state, so only people greater than 18 years old will only be included.
 * Employment Status
     + In this category 1 stands for “Civilian Employed, at Work”, while other codes suggest the person is currently not working full time. In this analysis we may want to filter for only people who are currently employed and working so the results of the analysis are not skewed by invididuals not working and/or not looking for work.
 * Person Earnings
     + Right away we noticed there are people with zero or less earnings.
     + According to the Bureau of Labor Statistics nearly 6.2 million workers in Texas were paid the federal minimum wage of $7.25 per hour.
         + This would make a person’s annual earnings of $15,080, without adjusting for federal and local taxes, working 40 hours a week for 52 weeks a year.
+        + In this analysis we will only include people who meet the annual earnings of the federal minimum wage without adjusting for taxes.
     + Looking at the first 10 rows of data you see a lot of rounded earnings values like 60,000.
-    + In this analysis we may have to keep in mind that when individuals were filling out their income values that they may have rounded up or down.
+        + In this analysis we may have to keep in mind that when individuals were filling out their income values that they may have rounded their earnings.
 
     
 #### __Additional Summary Data__
@@ -193,7 +194,7 @@ grid.arrange(earnings_hist_1, earnings_hist_2, ncol = 2)
 _Note: Inner joining with the household dataset on HOUSING_UNIT & AREA_CODE removed 151 observations due to NAs._
 
 
-Looking at the left histogram you can see the person earnings data is right skewed. Some person answered their earnings to exceed 500,000, which may be considered an outlier when you compare against the mean of 65,423. In this analysis we wouldn't want to exclude these values since they are not top coded and may provide useful insight in explaining our research questions. Instead we can chose to analyze the log of person earnings. As you can see applying the log function makes the data more normall distributed which may help with analyzing the variance in person earnings.
+Looking at the left histogram you can see the person earnings data is right skewed. Some answered their earnings to exceed 500,000, which may be considered an outlier when you compare against the mean of 65,423. In this analysis we don't want to exclude these values since they are not top coded and may provide useful insight in explaining our research questions. Instead we can chose to analyze the log of person earnings. As you can see applying the log function makes the data more normally distributed which may help with analyzing the variance in person earnings.
 
 
 
