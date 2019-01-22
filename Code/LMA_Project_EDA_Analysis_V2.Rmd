@@ -2,7 +2,7 @@
 title: "Labor Market Analysis EDA"
 author: "Rylee Iacolucci, Sophie McDevitt, Caitlin Howansky"
 date: "January 20, 2019"
-output: word_document
+output: html_document
 ---
 
 #### __Overview__
@@ -27,7 +27,9 @@ To answer these questions we'll be analyzing a person and household data file. T
 library(tidyverse)
 library(here)
 library(gridExtra)
+library(knitr)
 library(kableExtra)
+library(formattable)
 
 # tx_pop_df <- read_csv(here("Data/ss16ptx.csv"))
 tx_pop_df <- read_csv(here("Data/Person_Record_Adj.csv"))
@@ -74,24 +76,93 @@ head(tx_pop_df, 10)
 #### __Summary Statistics__
 
 * AGEP
-    + From the summary data you're able to see that age of people surveyed has a very wide range, while no nulls appear to be in the dataset.
+    +	From the summary data you’re able to see that age of people surveyed has a very wide range, while no nulls appear to be in the dataset.
     + In our analysis we want individuals who are legally able to be fully employed. In Texas the minimum age for full employment is 14, however, by law that individual is still considered a child.
-        + Persons under 18 years old have regulations limiting the total number of hours they can work in a single week.
-        + In this analysis we will want to analyze person whom are not bind hour age regulations by the state so only person greater than 18 years old will be analyzed.
+        + People under 18 years old have regulations limiting the total number of hours they can work in a single week.
+        + In this analysis we will want to analyze people who are not bound by hour age regulations by the state, so only people greater than 18 years old will be analyzed.
 * Employment Status
-    + In this category 1 stands for "Civilian Employed, at Work", while other codes suggest the person is currently not working full time. In this analysis we may want to filter for only persons who are currently employed and working so the results of the are not skewed by invididuals not working and/or not looking for work.
+    + In this category 1 stands for “Civilian Employed, at Work”, while other codes suggest the person is currently not working full time. In this analysis we may want to filter for only people who are currently employed and working so the results of the analysis are not skewed by invididuals not working and/or not looking for work.
 * Person Earnings
-    + Right away we noticed there are person with zero or less earnings.
+    + Right away we noticed there are people with zero or less earnings.
     + According to the Bureau of Labor Statistics nearly 6.2 million workers in Texas were paid the federal minimum wage of $7.25 per hour.
-        + This would make a persons annual earnings of $15,080, without adjusting for federal and local taxes, if that person worked 40 hours a week for 52 weeks a year.
+        + This would make a person’s annual earnings of $15,080, without adjusting for federal and local taxes, working 40 hours a week for 52 weeks a year.
     + Looking at the first 10 rows of data you see a lot of rounded earnings values like 60,000.
-    + In this analysis we may have to keep in mind that when individuals were filling our their income values that they may have rounded up or down.
+    + In this analysis we may have to keep in mind that when individuals were filling out their income values that they may have rounded up or down.
 
-```{r, echo=FALSE, fig.width=12, fig.height=4.5}
+    
+#### __Additional Summary Data__
+
+```{r, echo=FALSE, fig.width=12, fig.height=5}
 tx_pop_df <- tx_pop_df %>% 
   dplyr::filter(EMPLOYMENT_STATUS == 1 & PERSON_EARNINGS > 15080 & AGEP >= 18) %>% 
   dplyr::inner_join(tx_hh_df, c("HOUSING_UNIT", "AREA_CODE"))
 
+t1 <- tx_pop_df %>% 
+  dplyr::mutate(HOUSE_LANGUAGE = if_else(HOUSE_LANGUAGE == 1, "English Only",
+                                 if_else(HOUSE_LANGUAGE == 2, "Spanish",
+                                 if_else(HOUSE_LANGUAGE == 3, "Other Indo-European",
+                                 if_else(HOUSE_LANGUAGE == 4, "Asian and Pacific Island",
+                                 if_else(HOUSE_LANGUAGE == 5, "Other", "Unknown")))))) %>% 
+  dplyr::mutate(MALE = if_else(SEX == 1, 1, 0),
+                FEMALE = if_else(SEX == 2, 1, 0)) %>% 
+  dplyr::select(HOUSE_LANGUAGE, MALE, FEMALE, PERSON_EARNINGS) %>% 
+  dplyr::group_by(HOUSE_LANGUAGE) %>% 
+  dplyr::summarise(MALE = sum(MALE),
+                   FEMALE = sum(FEMALE),
+                   TOTAL_PEOPLE = MALE + FEMALE,
+                   AVG_PERSON_EARNINGS = mean(PERSON_EARNINGS)) %>% 
+  dplyr::mutate(AVG_PERSON_EARNINGS = color_tile("white", "#3498DB")(AVG_PERSON_EARNINGS)) %>% 
+  kable(escape = F, align = "c") %>% 
+  kable_styling(bootstrap_options = "striped", "condensed", position = "center", font_size = 13) %>% 
+  column_spec(1:5, bold = T, color = "black")
+
+
+
+t1
+
+
+```
+
+##### __Household Language__
+Looking at the above table you can see English speaking households are over double the second highest category of Spanish. The average person earnings are comparable through the first four categories but drops significantly for spanish speaking households, while the household with the highest average person earnings being Other Indo-European.
+
+<br>
+
+```{r, echo=FALSE, fig.width=12, fig.height=5}
+t2 <- tx_pop_df %>% 
+  dplyr::mutate(FAMILY_TYPE = if_else(FAMILY_TYPE == 1, "Married Couple",
+                                 if_else(FAMILY_TYPE == 2, "Male No Wife",
+                                 if_else(FAMILY_TYPE == 3, "Female No Husband",
+                                 if_else(FAMILY_TYPE == 4, "Male Alone",
+                                 if_else(FAMILY_TYPE == 5, "Male Not Alone",
+                                 if_else(FAMILY_TYPE == 6, "Female Alone",
+                                 if_else(FAMILY_TYPE == 7, "Female Not Alone", "Unknown")))))))) %>% 
+  dplyr::mutate(MALE = if_else(SEX == 1, 1, 0),
+                FEMALE = if_else(SEX == 2, 1, 0)) %>% 
+  dplyr::select(FAMILY_TYPE, MALE, FEMALE, PERSON_EARNINGS) %>% 
+  dplyr::group_by(FAMILY_TYPE) %>% 
+  dplyr::summarise(MALE = sum(MALE),
+                   FEMALE = sum(FEMALE),
+                   TOTAL_PEOPLE = MALE + FEMALE,
+                   AVG_PERSON_EARNINGS = mean(PERSON_EARNINGS)) %>% 
+  dplyr::mutate(AVG_PERSON_EARNINGS = color_tile("white", "#3498DB")(AVG_PERSON_EARNINGS)) %>% 
+  kable(escape = F, align = "c") %>% 
+  kable_styling(bootstrap_options = "striped", "condensed", position = "center", font_size = 13) %>% 
+  column_spec(1:5, bold = T, color = "black")
+
+t2
+
+```
+
+
+##### __Family Type__
+The most respondents in this category were Married Couples who also have the highest average earnings compared to other house hold family types. Married couples also make up a significant amount of the respondents. This could yield some interesting result which will non quantifiable variables may have to be considered durning the analysis.
+
+<br>
+
+#### __Graphical Overview__
+
+```{r, echo=FALSE, fig.width=12, fig.height=4.5}
 earnings_hist_1 <- tx_pop_df %>% 
   ggplot(aes(x = PERSON_EARNINGS)) +
   geom_histogram(binwidth = 20000, fill = "#880011", color = "white") +
