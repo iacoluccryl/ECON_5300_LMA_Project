@@ -1,0 +1,230 @@
+---
+title: "LMA EDA"
+author: "Rylee Iacolucci"
+date: "January 24, 2019"
+output: html_document
+---
+
+For our labor marketing analysis we've chosen to analyze Texas. Below are the research questions for this project:
+
+* In Texas how do earnings vary by educational attainment?
+* How does the premium for education vary by marital status?
+
+To answer these questions we'll be analyzing a person and household data file. The person data file contains over 200,000 observations and 280 columns. To answer our research questions we were able to reduce the data file to ten columns. In the rest of this paper we'll examine this data and describe the filtering out and why it's necessary for our economic analysis.
+
+In our initial EDA we found wide range of values for person earnings. Examining basic Texas work regulations we found the minimum age for full employment was 14 year old, however, people below 18 have restrictions on the amount of hours they're allowed to work in a single week. In Our analysis we want to examine people who are employed and not resticted by state regulations, which means we'll only be examining people fully employed and at least 18 years old. We are also filter for people that meet the annual earnings if they were receiving the federal minimum wage, which is $15,080 without adjusting for federal, state, and local taxes.
+
+
+
+```{r, include=FALSE, warning=FALSE}
+# Author: Rylee Iacolucci
+# 
+# Description: We're adjusting our research questions and this is our updated
+# eda for the LMA project.
+library(tidyverse)
+library(here)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(formattable)
+
+tx_pop_df <- read.csv(here("Data/tx_pop_data_v2.csv"))
+
+# This will be used to make vizualization standard
+basic_theme <- 
+  theme(legend.position = "none") +
+  theme(plot.title = element_text(size=16, face="bold", hjust=0, color="#000000")) +
+  theme(axis.title = element_text(size=12, face="bold", color="#000000")) +
+  theme(axis.title.y = element_text(angle=90)) +
+  theme(axis.title.x = element_text(hjust = .5)) +
+  theme_minimal() +
+  theme(axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(EMPLOYMENT_STATUS == 1 & PERSON_EARNINGS > 15080 & AGEP >= 18 & AGEP < 62)
+
+# Original data source column names:
+# 
+# person_number: SPORDER
+# citizen_status: CIT
+# class_of_worker: COW
+# employment_status: ESR
+# person_earnings: PERNP
+# educational_attainment: SCHL
+# marital_status: MAR
+# times_married: MARHT
+
+tx_pop_df <- 
+  tx_pop_df %>% 
+  mutate(SEX = if_else(SEX == 1, "MALE", "FEMALE"),
+         MARITAL_STATUS = if_else(MARITAL_STATUS == 1, "Married",
+                          if_else(MARITAL_STATUS == 2, "Widowed",
+                          if_else(MARITAL_STATUS == 3, "Divorced",
+                          if_else(MARITAL_STATUS == 4, "Separated",
+                          if_else(MARITAL_STATUS == 5, "Never Married", "Unknown"))))),
+         EDUCATIONAL_ATTAINMENT = if_else(EDUCATIONAL_ATTAINMENT == 1, "No Schooling",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 18, "Primary Education",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 21, "Bachelors/Associates/Attended",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 24, "Graduate/Professional", "Doctorate")))))
+
+tx_pop_df_spread <- 
+  tx_pop_df %>% 
+  mutate(value = 1) %>% 
+  spread(MARITAL_STATUS, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(EDUCATIONAL_ATTAINMENT, value, fill = 0)
+
+
+```
+
+
+#### __Data Summary__
+
+```{r, echo=FALSE}
+
+summary(tx_pop_df_spread[10:21])
+
+
+```
+
+* Person Earnings
+    + The max value being 749,000 brings into question whether or not this is a top coded value. We'll have to do more research to find if this value is just that. 
+* Times Married
+    + NAs in this category mean the person has never been married. 
+* Divorced
+    + This field is a binary variable so the mean being close to 0 means the majority of people surveyed have not been divorced.
+    + People who have never been married could bring down this average.
+* Married
+    + almost 2/3 people in this dataset are married.
+* Education
+    + The majority of people in this data set have some secondary education, a bachelors, or graduate/professional degree.
+    + This can be seen by looking at the mean of Bachelors/Associates/Attended and Graduate/Professional
+    
+#### __Person Earnings__
+
+```{r, echo=FALSE, fig.width=12, fig.height=4}
+options(scipen = 999)
+
+g1 <- 
+  tx_pop_df %>% 
+  ggplot(aes(x = PERSON_EARNINGS)) +
+  geom_histogram(binwidth = 20000, fill = "#880011", color = "white") +
+  basic_theme +
+  xlab("Person Earnings") +
+  ylab("Frequency") +
+  labs(title = "Histogram of Person Earnings",
+       subtitle = "Bin Width Every $20,000")
+
+g2 <- 
+  tx_pop_df %>% 
+  ggplot(aes(x = log(PERSON_EARNINGS))) +
+  geom_histogram(bins = 20, fill = "#880011", color = "white") +
+  basic_theme +
+  xlab("LOG Person Earnings") +
+  ylab("Frequency") +
+  labs(title = "Histogram of LOG Person Earnings",
+       subtitle = "20 Total Bins")
+
+
+grid.arrange(g1, g2, ncol = 2)
+
+```
+
+In the top left chart you can see how right skewed the data is. This was expected when the range of value in person earnings was so large. Since this is the case examining the log of person earnings will be more beneficial. Applying the log function returns the same chart in a more normal distribution form. There are still values closer to the 13 log value but we'll keep these values since their data could yeild interesting results.
+
+#### __Educational Attainment__
+
+
+```{r, echo=FALSE, fig.width=12, fig.height=4}
+g1 <- tx_pop_df %>% 
+  select(EDUCATIONAL_ATTAINMENT) %>% 
+  group_by(EDUCATIONAL_ATTAINMENT) %>% 
+  summarise(RECORDS = n()) %>% 
+  ggplot(aes(x = reorder(EDUCATIONAL_ATTAINMENT, RECORDS), y = RECORDS)) + 
+  geom_bar(stat = "identity", fill = "#880011", width = .7) +
+  ylim(0, 35000) +
+  ylab("Records") +
+  ggtitle("Frequency of Educational Attainment") +
+  coord_flip() +
+  basic_theme +
+  theme(axis.title.y = element_blank()) +
+  geom_text(aes(label = RECORDS), hjust = -.1)
+
+g2 <- tx_pop_df %>% 
+  select(MARITAL_STATUS) %>% 
+  group_by(MARITAL_STATUS) %>% 
+  summarise(RECORDS = n()) %>% 
+  ggplot(aes(x = reorder(MARITAL_STATUS, RECORDS), y = RECORDS)) + 
+  geom_bar(stat = "identity", fill = "#880011", width = .7) +
+  ylim(0, 55000) +
+  ylab("Records") +
+  ggtitle("Frequency of Marital Status") +
+  coord_flip() +
+  basic_theme +
+  theme(axis.title.y = element_blank()) +
+  geom_text(aes(label = RECORDS), hjust = -.1)
+  
+
+grid.arrange(g1, g2, ncol = 2)
+
+t1 <- 
+  tx_pop_df %>% 
+  select(SEX, EDUCATIONAL_ATTAINMENT, PERSON_EARNINGS) %>% 
+  group_by(SEX, EDUCATIONAL_ATTAINMENT) %>% 
+  summarise(avg_earnings = mean(PERSON_EARNINGS),
+            records = n()) %>% 
+  arrange(desc(SEX),
+          desc(avg_earnings)) %>% 
+  kable() %>% 
+  kable_styling(c("striped", "condensed"), font_size = 12, full_width = F, position = "float_left") %>% 
+  group_rows("Male Educational Attainment and Avg Earnings", 1, 5, label_row_css = "background-color: #666; color: #fff;") %>% 
+  group_rows("Female Educational Attainment and Avg Earnings", 6, 10, label_row_css = "background-color: #666; color: #fff;") %>% 
+  column_spec(1:4, bold = T, color = "black")
+
+t2 <- 
+  tx_pop_df %>% 
+  select(SEX, TIMES_MARRIED, PERSON_EARNINGS) %>% 
+  group_by(SEX, TIMES_MARRIED) %>% 
+  summarise(avg_earnings = mean(PERSON_EARNINGS),
+            records = n()) %>% 
+  arrange(desc(SEX),
+          desc(avg_earnings)) %>% 
+  kable() %>% 
+  kable_styling(c("striped", "condensed"), font_size = 12, full_width = F, position = "float_right") %>% 
+  group_rows("Male Times Married and Avg Earnings", 1, 4, label_row_css = "background-color: #666; color: #fff;") %>%
+  group_rows("Female Times Married and Avg Earnings", 5, 8, label_row_css = "background-color: #666; color: #fff;") %>%
+  column_spec(1:4, bold = T, color = "black")
+
+t1
+t2
+
+```
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+
+In the graphs above you can see that most people surveyed have either a graduate or some secondary education. Additionally, this top right chart show just how many people are married compared to other categories.
+
+Another thing we were interested in observing was the educational attainment by sex and the average earnings by that category. In the table above you can see how much more on average a person earns by having either a Doctorate or Graduate level eduation. What also interesting is the differnce in average earnings between male and females who have a graduate/professional education. To examine this difference more we'd have to look at the job differences for people in that category.
+
+When you look at the times married table you'll notice people who are never married are earning on average less than those who have been married one time or more. It's also interesting to note males who have been married at least once earn on average almost $30K more than females.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
