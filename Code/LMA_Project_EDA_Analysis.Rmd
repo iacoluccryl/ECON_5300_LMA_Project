@@ -82,7 +82,7 @@ age_g_1 <- tx_pop_df %>%
   xlab("Age") +
   ylab("Frequency") +
   ggtitle("Histogram of Age") +
-  labs(subtitle = "Bin Width Equals 5 Years")
+  labs(subtitle = "Bin Width Every 5 Years")
 
 
 grid.arrange(employment_g_1, age_g_1, ncol = 2)
@@ -102,30 +102,87 @@ Looking at the age histogram you can see there is a very large spread of the age
 
 #### __Adjusting For Employment Status 1__
 
-```{r, echo=FALSE, fig.align='float.right'}
+```{r, echo=FALSE, fig.width=12, fig.height=4.5}
 # Since we may want to just analyze person who are employed
 # we filter out any other employment code that isn't 1
 tx_pop_df <- tx_pop_df %>% 
   dplyr::filter(EMPLOYMENT_STATUS == 1)
 
-age_g_2 <- tx_pop_df %>% 
-  dplyr::select(AGEP) %>%
-  dplyr::filter(AGEP > 0) %>% # This filters out age less than one
-  ggplot(aes(x = AGEP)) + 
-  geom_histogram(binwidth = 5, fill = '#880011', color = 'white') +
+earnings_p_one <- tx_pop_df %>% 
+  ggplot(aes(x = PERSON_EARNINGS)) +
+  geom_histogram(binwidth = 50000, fill = "#880011", color = "white") +
   basic_theme +
-  xlab("Age") +
+  xlab("Person Earnings") +
   ylab("Frequency") +
-  ggtitle("Histogram of Age") +
-  labs(subtitle = "Bin Width Equals 5 Years")
+  labs(title = "Histogram of Person Earnings",
+       subtitle = "Bin Width Every $20,000")
+  
+  
+box_p_one <- tx_pop_df %>% 
+  ggplot(aes(y = PERSON_EARNINGS)) +
+  geom_boxplot(fill = "#880011", alpha = .2, width = .5) +
+  basic_theme +
+  ylab("Person Earnings") +
+  labs(title = "Box Plot of Person Earnings")
 
-age_g_2
 summary(tx_pop_df)
+
+grid.arrange(earnings_p_one, box_p_one, ncol = 2)
+
+
 
 
 ```
 
-In this chart you can see that there is a very wide range of earnings. In the summary statistics you can see that the 3rd quartile is much lower than the max value in the dataset. However, that max value having a higher frequency may mean that it's a null code or a did not answer code.
+After filtering for persons of employment status 1 I noticed the range of values in person earnings. Above are two visualizations showing these outliers. As a group we may want to decide if we want to keep values within the 1st and 3rd quartiles +- the IQR.
+
+#### __Filtering Out Outliars in Person Earnings__
+
+```{r, echo=FALSE, fig.width=12, fig.height=4.5}
+
+earnings_iqr <- IQR(tx_pop_df$PERSON_EARNINGS)
+earnings_first_q <- quantile(tx_pop_df$PERSON_EARNINGS, 0.25)
+earnings_third_q <- quantile(tx_pop_df$PERSON_EARNINGS, 0.75)
+
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(PERSON_EARNINGS > earnings_first_q - earnings_iqr & PERSON_EARNINGS < earnings_third_q + earnings_iqr)
+
+earnings_p_one <- tx_pop_df %>% 
+  ggplot(aes(x = PERSON_EARNINGS)) +
+  geom_histogram(binwidth = 5000, fill = "#880011", color = "white") +
+  basic_theme +
+  xlab("Person Earnings") +
+  ylab("Frequency") +
+  labs(title = "Histogram of Person Earnings",
+       subtitle = "Bin Width Every $5,000")
+  
+  
+box_p_one <- tx_pop_df %>% 
+  ggplot(aes(y = PERSON_EARNINGS)) +
+  geom_boxplot(fill = "#880011", alpha = .2, width = .5) +
+  basic_theme +
+  ylab("Person Earnings") +
+  labs(title = "Box Plot of Person Earnings")
+
+summary(tx_pop_df)
+
+grid.arrange(earnings_p_one, box_p_one, ncol = 2)
+
+
+
+
+```
+
+Here are the same vizualization after adjusting the population to within the 1st and 3rd quartiles +- the IQR.
+
+
+
+
+
+
+
+
+
 
 
 
