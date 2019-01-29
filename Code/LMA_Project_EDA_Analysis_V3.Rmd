@@ -1,4 +1,4 @@
----
+ y66t54 1e` ---
 title: "LMA EDA"
 author: "Rylee Iacolucci"
 date: "January 24, 2019"
@@ -214,10 +214,27 @@ When you look at the times married table you'll notice people who are never marr
 
 
 
+```{r}
+#Starting to run linear regressions
+
+summary(lm(log(tx_pop_df$PERSON_EARNINGS) ~ tx_pop_df$EDUCATIONAL_ATTAINMENT))
+
+summary(lm(log(tx_pop_df$PERSON_EARNINGS) ~ tx_pop_df$EDUCATIONAL_ATTAINMENT + tx_pop_df$MARITAL_STATUS + tx_pop_df$SEX + tx_pop_df$AGEP))
+
+#Bach/Assoc reference data
+#Divorced reference data
+
+```
 
 
 
+This model explains approximately 30% of the variability of the response data around its mean. Holding all other vaiables constant, the educational attainment of a Doctorate can make about 66% more than someone who has just their Bachelors or Associates degree. In the same respect, obtaining a Graduate degree increases personal earnings by 45% more than a Bachelor's degree. Solely having primary education decreases earnings by 24% and not having any schooling decreases earnings by 40% in comparison with a Bachelor's or Associate's degree. 
 
+Holding educational attainment, sex, and age contstant, married individuals make on average 8% more than those that are divorced. However, people who are seperated, widowed and never been married all make less on average than someone who is divorced. 
+
+Males make 31% more than females do in Texas when holding all other variables constant.
+
+For every year increase in age, personal earnings is increased by a little over 1%. 
 
 
 
