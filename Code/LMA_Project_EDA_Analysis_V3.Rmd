@@ -1,9 +1,13 @@
- y66t54 1e` ---
-title: "LMA EDA"
+---
+title: "LMA EDA & Model Test"
 author: "Rylee Iacolucci"
 date: "January 24, 2019"
-output: html_document
+output: 
+  html_document:
+    toc : true
 ---
+
+## __EDA__
 
 For our labor marketing analysis we've chosen to analyze Texas. Below are the research questions for this project:
 
@@ -82,7 +86,7 @@ tx_pop_df_spread <-
 ```
 
 
-#### __Data Summary__
+### __Data Summary__
 
 ```{r, echo=FALSE}
 
@@ -104,7 +108,7 @@ summary(tx_pop_df_spread[10:21])
     + The majority of people in this data set have some secondary education, a bachelors, or graduate/professional degree.
     + This can be seen by looking at the mean of Bachelors/Associates/Attended and Graduate/Professional
     
-#### __Person Earnings__
+### __Person Earnings__
 
 ```{r, echo=FALSE, fig.width=12, fig.height=4}
 options(scipen = 999)
@@ -136,7 +140,7 @@ grid.arrange(g1, g2, ncol = 2)
 
 In the top left chart you can see how right skewed the data is. This was expected when the range of value in person earnings was so large. Since this is the case examining the log of person earnings will be more beneficial. Applying the log function returns the same chart in a more normal distribution form. There are still values closer to the 13 log value but we'll keep these values since their data could yeild interesting results.
 
-#### __Educational Attainment__
+### __Educational Attainment__
 
 
 ```{r, echo=FALSE, fig.width=12, fig.height=4}
@@ -212,14 +216,17 @@ Another thing we were interested in observing was the educational attainment by 
 
 When you look at the times married table you'll notice people who are never married are earning on average less than those who have been married one time or more. It's also interesting to note males who have been married at least once earn on average almost $30K more than females.
 
-
+## __Model Test__
 
 ```{r}
 #Starting to run linear regressions
 
-summary(lm(log(tx_pop_df$PERSON_EARNINGS) ~ tx_pop_df$EDUCATIONAL_ATTAINMENT))
+model_one <-  lm(log(PERSON_EARNINGS) ~ EDUCATIONAL_ATTAINMENT, data = tx_pop_df)
 
-summary(lm(log(tx_pop_df$PERSON_EARNINGS) ~ tx_pop_df$EDUCATIONAL_ATTAINMENT + tx_pop_df$MARITAL_STATUS + tx_pop_df$SEX + tx_pop_df$AGEP))
+model_two <-  lm(log(PERSON_EARNINGS) ~ EDUCATIONAL_ATTAINMENT + MARITAL_STATUS + SEX + AGEP, data = tx_pop_df)
+
+summary(model_one)
+summary(model_two)
 
 #Bach/Assoc reference data
 #Divorced reference data
