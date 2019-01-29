@@ -1,0 +1,185 @@
+---
+title: "LMA_Analysis_V1"
+author: "Rylee Iacolucci"
+date: "January 23, 2019"
+output: 
+  html_document:
+    toc : true
+---
+
+### __Intro and Notes__
+
+This is the first version of our modeling in the LMA assignment. In this analysis we'll begin developing our models based on our research questions. As we progress through this analysis we'll refine our approach and explain our results and any steps we're taking to adjust our analysis.
+
+Research Questions:
+
+* In Texas how do earnings vary by educational attainment?
+* How does the premium for education vary by marital status?
+
+* Notes
+    + Since earnings is right skewed we need to analyze to log(person earnins)
+    + Need to understand log regression
+
+
+```{r, include=FALSE, warning=FALSE}
+# This is our first analysis of the LMA data. In this code we'll be
+# performing different statistical analyze, which is different from
+# the EDA code.
+library(tidyverse)
+library(here)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(formattable)
+
+tx_pop_df <- read.csv(here("Data/tx_pop_data_v2.csv"))
+
+# This will be used to make vizualization standard
+basic_theme <- 
+  theme(legend.position = "none") +
+  theme(plot.title = element_text(size=16, face="bold", hjust=0, color="#000000")) +
+  theme(axis.title = element_text(size=12, face="bold", color="#000000")) +
+  theme(axis.title.y = element_text(angle=90)) +
+  theme(axis.title.x = element_text(hjust = .5)) +
+  theme_minimal() +
+  theme(axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(EMPLOYMENT_STATUS == 1 & PERSON_EARNINGS > 15080 & AGEP >= 18 & AGEP < 62)
+
+# Original data source column names:
+# 
+# person_number: SPORDER
+# citizen_status: CIT
+# class_of_worker: COW
+# employment_status: ESR
+# person_earnings: PERNP
+# educational_attainment: SCHL
+# marital_status: MAR
+# times_married: MARHT
+
+tx_pop_df <- 
+  tx_pop_df %>% 
+  mutate(SEX = if_else(SEX == 1, "male", "female"),
+         MARITAL_STATUS = if_else(MARITAL_STATUS == 1, "married",
+                          if_else(MARITAL_STATUS == 2, "widowed",
+                          if_else(MARITAL_STATUS == 3, "divorced",
+                          if_else(MARITAL_STATUS == 4, "separated",
+                          if_else(MARITAL_STATUS == 5, "never Married", "unknown"))))),
+         EDUCATIONAL_ATTAINMENT = if_else(EDUCATIONAL_ATTAINMENT == 1, "no_schooling",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 18, "primary_education",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 21, "bachelors_associates_attended",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 24, "graduate_professional", "doctorate")))))
+
+tx_pop_df_spread <- 
+  tx_pop_df %>% 
+  mutate(value = 1) %>% 
+  spread(MARITAL_STATUS, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(EDUCATIONAL_ATTAINMENT, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(SEX, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(log_person_earnings = log(PERSON_EARNINGS))
+
+```
+
+
+### __Model One || Educational Attainment__
+
+```{r, echo=FALSE, fig.width=14}
+options(scipen = 999)
+
+# Model one, which includes just education variables.
+# No schooling was left out to base line in summary.
+model_one <-
+  lm(PERSON_EARNINGS ~ primary_education + bachelors_associates_attended + graduate_professional + doctorate, data = tx_pop_df_spread)
+
+summary(model_one)
+
+
+
+
+```
+<br>
+This first model has some interesting results because primary education is the only variable that is not significant in explaining the variation in person earnings. In this model no schooling was left out so the estimates are in comparison to someone who has no schooling. I find the difference in the bachelors and graduate coefficients the most interesting. Based on the coeficient of graduate, or professional education, a person on average is expected to earn `$50,300` more than someone who has no schooling, while someone with a bachelors, associates, or attended secondary education, is on average expected to earn `$12,680` more than someone with no schooling.
+
+### __Model Two || Add Age__
+
+```{r, echo=FALSE, fig.width=14}
+model_two <- 
+  lm(PERSON_EARNINGS ~ primary_education + bachelors_associates_attended + graduate_professional + doctorate + AGEP, data = tx_pop_df_spread)
+
+summary(model_two)
+
+```
+<br>
+
+In this model only age was added as an independent variable. As you can see primary education is now a significant variable in explaining the variation in person earnings. All variables included are significant at 1% level in explaining the variation in person earnings. Some key differences between the basic model and one including age are:
+
+* Adjusted R Squared
+    + from 0.1087 to 0.1425
+* Age
+    + for every 1 year of age person earnings on average are expected to increase `$1,074`
+        + This is significant at the 1% level.
+* a person with a graduate, or professional education now on average is expected to earn `$54,004` more than someone with no schooling.
+* a person with a bachelors, associates, or attended secondary education now on average is expected to earn `$16,841` more than someone with no schooling.
+
+### __Model Three || Add Sex__
+
+```{r, echo=FALSE}
+model_three <- lm(PERSON_EARNINGS ~ primary_education + bachelors_associates_attended + graduate_professional + doctorate + AGEP + male, data = tx_pop_df_spread)
+
+summary(model_three)
+
+```
+<br>
+
+In this model sex was added and female was not used so you can compare male earnings to female earnings in the model. Interestingly all variables in this model are significant at the one percent level. Some key difference between model two and model three are:
+
+* Adjusted R Squared
+    + from 0.1425 to 0.18
+* Male
+    + Males on average are expected to earn `$26,221` more than females
+    + This is significant at the 1% level
+* a person with a graduate, or professional education now on average is expected to earn `$59,488` more than someone with no schooling.
+* a person with a bachelors, associates, or attended secondary education now on average is expected to earn `$21,824` more than someone with no schooling.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
