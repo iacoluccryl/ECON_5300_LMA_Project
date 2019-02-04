@@ -19,6 +19,8 @@ library(knitr)
 library(kableExtra)
 library(formattable)
 library(scales)
+library(lmtest)
+library(sandwich)
 
 tx_pop_df <- read.csv(here("Data/tx_pop_data_v2.csv"))
 
@@ -110,17 +112,44 @@ grid.arrange(g1, g2, ncol = 2)
 
 ```
 
+## __BPG Test__
 
+```{r}
+
+model_one <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + male, data = tx_pop_df_spread)
+
+bptesteq = lm(residuals(model_one)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + male, data = tx_pop_df_spread)
+summary(bptesteq)
+
+
+
+```
+Since the p-value is so small, we reject the null hypothesis that the variances are equal across all y. Therefore, we have stong evidence of heteroskedasticity. To correct for this, we will take the log of wage.
 
 
 ## __Model One__
 
 ```{r, echo=FALSE}
-model_one <- lm(log(WAGE) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + male, data = tx_pop_df_spread)
+model_one_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP)+ male, data = tx_pop_df_spread)
 
-summary(model_one)
+
+
+bptesteq = lm(residuals(model_one_log)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + (AGEP*AGEP) + male, data = tx_pop_df_spread)
+summary(bptesteq)
 
 ```
+In this model, we still have heteroskedasticity so we will have to take the robust standard errors. 
+
+
+```{r}
+#Generate robust standard errors
+
+vcovHC(model_one_log, type = "HC")
+modone_log_se <- diag(vcovHC(model_one_log, type = "HC"))^0.5
+modone_log_se
+
+```
+
 
 Holding all other variables constant someone with a bachelors degree on average earns `r round((exp(0.7337389) - 1) * 100, 2)`% more than someone with no education. Someone with a professional degree earns on average `r round((exp(1.0730300) - 1) * 100, 2)`% more than someone with no education.
 
