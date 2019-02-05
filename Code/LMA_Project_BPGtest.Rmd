@@ -2,9 +2,11 @@
 title: "BPG Tests and Linear Models"
 author: "Caitlin Howansky"
 date: "February 4, 2019"
-output: 
+output:
+  word_document:
+    toc: yes
   html_document:
-    toc : True
+    toc: yes
 ---
 
 For our labor marketing analysis we've chosen to analyze Texas. Below are the research questions for this project:
@@ -119,14 +121,16 @@ tx_pop_df_spread_male <-
 
 # A person with no education is left out.
 # A person who identifies their race as other is left out.
-model_one <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+model_one_male <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
                         masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_male)
 
-bptesteq = lm(residuals(model_one) * residuals(model_one) ~ 
+bptest(model_one_male)
+
+bptesteq = lm(residuals(model_one_male) * residuals(model_one_male) ~ 
                 primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_male)
 
-# # This is the summary of the first model. Without taking the LOG of wage.
-# # We know this will not yield the best results.
+# This is the summary of the first model. Without taking the LOG of wage.
+# We know this will not yield the best results.
 # summary(model_one)
 
 ```
@@ -155,9 +159,9 @@ bptesteq = lm(residuals(model_one_log) * residuals(model_one_log) ~
               (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
                masters + professional + doctorate + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_male)
 
-summary(bptesteq)
+#summary(bptesteq)
 
-
+bptest(model_one_log)
 ```
 
 In this model, since the P value is still close to zero we have strong evidence of heteroskedasticity so we will have to take the robust standard errors. 
@@ -181,15 +185,16 @@ tx_pop_df_spread_female <-
   tx_pop_df_spread %>% 
   filter(female == 1)
 
-model_one <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+model_one_female <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
                         masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
 
-bptesteq = lm(residuals(model_one)*residuals(model_one) ~ 
+bptesteq = lm(residuals(model_one_female)*residuals(model_one_female) ~ 
              (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
               masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
 
-summary(bptesteq)
+#summary(bptesteq)
 
+bptest(model_one_female)
 ```
 
 Again, because the p-value is so small, we reject the null hypothesis so that we have strong evidence to say that this model is heteroskedastic. 
@@ -205,8 +210,8 @@ bptesteq = lm(residuals(model_two_log) * residuals(model_two_log) ~
              (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
               masters + professional + doctorate + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
 
-summary(bptesteq)
-
+#summary(bptesteq)
+bptest(model_two_log)
 ```
 
 Since there is still heteroskedasticity, we will correct with the robust standard errors. 
@@ -245,8 +250,8 @@ bptesteq = lm(residuals(model_married_male) * residuals(model_married_male) ~
               masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
               divorced + married + separated + widowed), data = tx_pop_df_spread_male)
 
-summary(bptesteq)
-
+#summary(bptesteq)
+bptest(model_married_male)
 ```
 
 Because of the heteroskedasticity, we will take the log of the wage variable. 
@@ -257,14 +262,14 @@ model_male_log <- lm(LOG_WAGE ~ (primary_education + ged_or_equivalent + some_co
                                  masters + professional + doctorate + AGEP + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
                                  divorced + married + separated + widowed), data = tx_pop_df_spread_male)
 
-summary(model_male_log)
 
 bptesteq = lm(residuals(model_male_log) * residuals(model_male_log) ~ 
              (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
               masters + professional + doctorate + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
               divorced + married + separated + widowed), data = tx_pop_df_spread_male)
 
-summary(bptesteq)
+#summary(bptesteq)
+bptest(model_male_log)
 ```
 
 Generating robust standard errors:
