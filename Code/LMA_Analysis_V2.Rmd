@@ -118,26 +118,29 @@ grid.arrange(g1, g2, ncol = 2)
 
 model_one <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + male, data = tx_pop_df_spread)
 
-bptesteq = lm(residuals(model_one)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + male, data = tx_pop_df_spread)
+bptesteq = lm(residuals(model_one) * residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + male, data = tx_pop_df_spread)
+
 summary(bptesteq)
 
 
 
 ```
+
 Since the p-value is so small, we reject the null hypothesis that the variances are equal across all y. Therefore, we have stong evidence of heteroskedasticity. To correct for this, we will take the log of wage.
 
 
 ## __Model One__
 
 ```{r, echo=FALSE}
+
 model_one_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP)+ male, data = tx_pop_df_spread)
 
-
-
 bptesteq = lm(residuals(model_one_log)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + (AGEP*AGEP) + male, data = tx_pop_df_spread)
+
 summary(bptesteq)
 
 ```
+
 In this model, we still have heteroskedasticity so we will have to take the robust standard errors. 
 
 
@@ -162,7 +165,7 @@ t1 <-
   summarise(`Avg Age` = mean(AGEP),
             `Avg Wage` = mean(WAGE)) %>% 
   mutate(`Avg Wage` = dollar(`Avg Wage`)) %>%
-  kable(size = 10, align = "l", escape = F) %>% 
+  kable(size = 10, align = c("l", "l", "c", "c"), escape = F) %>% 
   kable_styling(bootstrap_options = c("striped", "condensed")) %>% 
   column_spec(1:4, color = "#000000") %>% 
   column_spec(1, width = "12em") %>% 
