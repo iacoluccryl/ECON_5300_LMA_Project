@@ -1,0 +1,197 @@
+---
+title: "BPG Tests and Linear Models"
+author: "Caitlin Howansky"
+date: "February 4, 2019"
+output: pdf_document
+---
+
+For our labor marketing analysis we've chosen to analyze Texas. Below are the research questions for this project:
+
+* In Texas how do earnings vary by educational attainment?
+* How does the premium for education vary by marital status?
+
+To answer these questions we'll be analyzing the personal data file. The person data file contains over 200,000 observations and 280 columns. To answer our research questions we were able to reduce the data file to ten columns. In the rest of this paper we'll examine this data and describe the filtering out and why it's necessary for our economic analysis.
+
+In our initial EDA we found wide range of values for person earnings. Examining basic Texas work regulations we found the minimum age for full employment was 14 year old, however, people below 18 have restrictions on the amount of hours they're allowed to work in a single week. In our analysis we want to examine people who are employed and not resticted by state regulations, which means we'll only be examining people fully employed and at least 18 years old. We are also filter for people that meet the annual earnings if they were receiving the federal minimum wage, which is $15,080 without adjusting for federal, state, and local taxes.
+
+
+
+```{r, include = FALSE, warning = FALSE}
+# This is our first analysis of the LMA data. In this code we'll be
+# performing different statistical analyze, which is different from
+# the EDA code.
+library(tidyverse)
+library(here)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(formattable)
+library(scales)
+library(lmtest)
+library(sandwich)
+
+tx_pop_df <- read.csv(here("Data/tx_pop_data_v2.csv"))
+
+# This will be used to make vizualization standard
+basic_theme <- 
+  theme(legend.position = "none") +
+  theme(plot.title = element_text(size=16, face="bold", hjust=0, color="#000000")) +
+  theme(axis.title = element_text(size=12, face="bold", color="#000000")) +
+  theme(axis.title.y = element_text(angle=90)) +
+  theme(axis.title.x = element_text(hjust = .5)) +
+  theme_minimal() +
+  theme(axis.line = element_line(color = "#000000"),
+        axis.ticks = element_line(color = "#000000"),
+        axis.text = element_text(color = "#000000"))
+
+# Filter For Working Age Persons
+# $418,000 is the top code value for Texas
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(EMPLOYMENT_STATUS == 1 & WAGE > 15080 & WAGE < 418000 & AGEP >= 18 & AGEP < 62)
+
+# Original data source column names:
+# 
+# person_number: SPORDER
+# citizen_status: CIT
+# class_of_worker: COW
+# employment_status: ESR
+# person_earnings: PERNP
+# educational_attainment: SCHL
+# marital_status: MAR
+# times_married: MARHT
+
+tx_pop_df <- 
+  tx_pop_df %>% 
+  mutate(SEX = if_else(SEX == 1, "male", "female"),
+         MARITAL_STATUS = if_else(MARITAL_STATUS == 1, "married",
+                          if_else(MARITAL_STATUS == 2, "widowed",
+                          if_else(MARITAL_STATUS == 3, "divorced",
+                          if_else(MARITAL_STATUS == 4, "separated",
+                          if_else(MARITAL_STATUS == 5, "never Married", "unknown"))))),
+         EDUCATIONAL_ATTAINMENT = if_else(EDUCATIONAL_ATTAINMENT == 1, "no_schooling",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 16, "primary_education",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 18, "ged_or_equivalent",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 20, "some_college",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 20, "associates",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 21, "bachelors",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 22, "masters",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 23, "professional",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 24, "doctorate", "Other"))))))))))
+
+# This takes the long dataset and makes it wide by taking the education 
+# columns and making them into their own column. I will do the same for
+# sex.
+tx_pop_df_spread <- 
+  tx_pop_df %>% 
+  mutate(value = 1) %>% 
+  spread(EDUCATIONAL_ATTAINMENT, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(SEX, value, fill = 0)
+
+
+```
+
+
+## __BPG Test__
+
+For our model, we have chosen to use the educational attainment, age, sex, and race. Although we are not looking at age, sex , and race, to do our best to satisfy the zero conditonal mean we have decided to include them. We then have to look at the heteroskedasticity of the model. To do this, we will conduct a BPG test. 
+
+
+```{r, echo = TRUE}
+
+tx_pop_df_spread_male <- subset(tx_pop_df_spread, male == 1)
+model_one <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_male)
+
+bptesteq = lm(residuals(model_one)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_male)
+summary(bptesteq)
+
+
+
+```
+
+Since the p-value is so small, we reject the null hypothesis that the variances are equal across all y. Therefore, we have stong evidence of heteroskedasticity. To correct for this, we will take the log of wage.
+
+
+
+
+```{r, echo=TRUE}
+model_one_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP), data = tx_pop_df_spread_male)
+
+
+
+bptesteq = lm(residuals(model_one_log)*residuals(model_one_log) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + I(AGEP*AGEP), data = tx_pop_df_spread_male)
+summary(bptesteq)
+
+```
+In this model, we still have heteroskedasticity so we will have to take the robust standard errors. 
+
+
+```{r, echo = TRUE}
+#Generate robust standard errors
+
+vcovHC(model_one_log, type = "HC")
+modone_log_se <- diag(vcovHC(model_one_log, type = "HC"))^0.5
+modone_log_se
+
+```
+
+Testing for heteroskedasticity for the female model:
+```{r, echo = TRUE}
+tx_pop_df_spread_female <- subset(tx_pop_df_spread, female == 1)
+model_one <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_female)
+
+bptesteq = lm(residuals(model_one)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_female)
+summary(bptesteq)
+```
+Again, because the p-value is so small, we reject the null hypothesis so that we have strong evidence to say that this model is heteroskedastic. 
+
+```{r, echo=TRUE}
+model_two_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP), data = tx_pop_df_spread_female)
+
+
+
+bptesteq = lm(residuals(model_two_log)*residuals(model_two_log) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + (AGEP*AGEP), data = tx_pop_df_spread_female)
+summary(bptesteq)
+
+```
+
+Since there is still heteroskedasticity, we will correct with the robust standard errors. 
+
+```{r, echo = TRUE}
+#Generate robust standard errors
+
+vcovHC(model_two_log, type = "HC")
+modone_log_se <- diag(vcovHC(model_two_log, type = "HC"))^0.5
+modone_log_se
+```
+
+Our next models include marital status.
+```{r, echo = TRUE}
+
+model_married_male <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + MARITAL_STATUS, data = tx_pop_df_spread_male)
+
+bptesteq = lm(residuals(model_married_male)*residuals(model_married_male) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + MARITAL_STATUS, data = tx_pop_df_spread_male)
+summary(bptesteq)
+
+```
+Because of the heteroskedasticity, we will take the log of the wage variable. 
+
+```{r, echo = TRUE}
+model_male_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP) + MARITAL_STATUS, data = tx_pop_df_spread_male)
+
+
+
+bptesteq = lm(residuals(model_male_log)*residuals(model_male_log) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + I(AGEP*AGEP) + MARITAL_STATUS , data = tx_pop_df_spread_male)
+summary(bptesteq)
+```
+Generating robust standard errors:
+
+```{r, echo = TRUE}
+vcovHC(model_male_log, type = "HC")
+modone_log_se <- diag(vcovHC(model_male_log, type = "HC"))^0.5
+modone_log_se
+```
+
