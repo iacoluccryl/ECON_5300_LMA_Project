@@ -2,7 +2,9 @@
 title: "BPG Tests and Linear Models"
 author: "Caitlin Howansky"
 date: "February 4, 2019"
-output: pdf_document
+output: 
+  html_document:
+    toc : True
 ---
 
 For our labor marketing analysis we've chosen to analyze Texas. Below are the research questions for this project:
@@ -255,7 +257,7 @@ model_male_log <- lm(LOG_WAGE ~ (primary_education + ged_or_equivalent + some_co
                                  masters + professional + doctorate + AGEP + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
                                  divorced + married + separated + widowed), data = tx_pop_df_spread_male)
 
-
+summary(model_male_log)
 
 bptesteq = lm(residuals(model_male_log) * residuals(model_male_log) ~ 
              (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
