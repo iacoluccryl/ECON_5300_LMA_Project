@@ -59,7 +59,8 @@ tx_pop_df <- tx_pop_df %>%
 
 tx_pop_df <- 
   tx_pop_df %>% 
-  mutate(SEX = if_else(SEX == 1, "male", "female"),
+  mutate(LOG_WAGE = log(WAGE),
+         SEX = if_else(SEX == 1, "male", "female"),
          MARITAL_STATUS = if_else(MARITAL_STATUS == 1, "married",
                           if_else(MARITAL_STATUS == 2, "widowed",
                           if_else(MARITAL_STATUS == 3, "divorced",
@@ -73,7 +74,10 @@ tx_pop_df <-
                                   if_else(EDUCATIONAL_ATTAINMENT == 21, "bachelors",
                                   if_else(EDUCATIONAL_ATTAINMENT == 22, "masters",
                                   if_else(EDUCATIONAL_ATTAINMENT == 23, "professional",
-                                  if_else(EDUCATIONAL_ATTAINMENT == 24, "doctorate", "Other"))))))))))
+                                  if_else(EDUCATIONAL_ATTAINMENT == 24, "doctorate", "Other"))))))))),
+         RACE = if_else(RACE == 1, "WHITE",
+                if_else(RACE == 2, "AFRICAN_AMERICAN",
+                if_else(RACE == 3, "AMERICAN_INDIAN", "OTHER"))))
 
 # This takes the long dataset and makes it wide by taking the education 
 # columns and making them into their own column. I will do the same for
@@ -88,26 +92,53 @@ tx_pop_df_spread <-
   mutate(value = 1) %>% 
   spread(SEX, value, fill = 0)
 
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(RACE, value, fill = 0)
+
 
 ```
 
 
 ## __BPG Test__
 
-For our model, we have chosen to use the educational attainment, age, sex, and race. Although we are not looking at age, sex , and race, to do our best to satisfy the zero conditonal mean we have decided to include them. We then have to look at the heteroskedasticity of the model. To do this, we will conduct a BPG test. 
+For our model, we have chosen to use educational attainment, age, sex, and race as the independent variables describing wage. Later we'll examine whether including age, sex, and race are enough variables to satisfy our model not violating the zero conditional mean assumption. Since we are examine wage and know that our data is right skewed we suspect our model to have heteroskedasticity. To test whether or not this is true we'll use a BPG test.
 
+### __Wage Model for Males__
 
 ```{r, echo = TRUE}
 
-tx_pop_df_spread_male <- subset(tx_pop_df_spread, male == 1)
-model_one <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_male)
+# This just filters for all males in the dataset. We're chosing to seperate females and males
+# to make the interpretation of our results easier.
+tx_pop_df_spread_male <- 
+  tx_pop_df_spread %>% 
+  filter(male == 1)
 
-bptesteq = lm(residuals(model_one)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_male)
-summary(bptesteq)
+# A person with no education is left out.
+# A person who identifies their race as other is left out.
+model_one <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+                        masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_male)
 
+bptesteq = lm(residuals(model_one) * residuals(model_one) ~ 
+                primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_male)
 
+# # This is the summary of the first model. Without taking the LOG of wage.
+# # We know this will not yield the best results.
+# summary(model_one)
 
 ```
+
+
+
+```{r, echo=FALSE}
+
+# BPG test for first model.
+summary(bptesteq)
+
+```
+
+
 
 Since the p-value is so small, we reject the null hypothesis that the variances are equal across all y. Therefore, we have stong evidence of heteroskedasticity. To correct for this, we will take the log of wage.
 
@@ -115,76 +146,127 @@ Since the p-value is so small, we reject the null hypothesis that the variances 
 
 
 ```{r, echo=TRUE}
-model_one_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP), data = tx_pop_df_spread_male)
+model_one_log <- lm(LOG_WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+                                masters + professional + doctorate + AGEP + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_male)
 
+bptesteq = lm(residuals(model_one_log) * residuals(model_one_log) ~ 
+              (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+               masters + professional + doctorate + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_male)
 
-
-bptesteq = lm(residuals(model_one_log)*residuals(model_one_log) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + I(AGEP*AGEP), data = tx_pop_df_spread_male)
 summary(bptesteq)
 
+
 ```
-In this model, we still have heteroskedasticity so we will have to take the robust standard errors. 
+
+In this model, since the P value is still close to zero we have strong evidence of heteroskedasticity so we will have to take the robust standard errors. 
 
 
 ```{r, echo = TRUE}
-#Generate robust standard errors
 
+#Generate robust standard errors
 vcovHC(model_one_log, type = "HC")
-modone_log_se <- diag(vcovHC(model_one_log, type = "HC"))^0.5
+
+modone_log_se <- diag(vcovHC(model_one_log, type = "HC")) ^ 0.5
+
 modone_log_se
 
 ```
 
-Testing for heteroskedasticity for the female model:
-```{r, echo = TRUE}
-tx_pop_df_spread_female <- subset(tx_pop_df_spread, female == 1)
-model_one <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_female)
+### __Wage Model for Females__
 
-bptesteq = lm(residuals(model_one)*residuals(model_one) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP, data = tx_pop_df_spread_female)
+```{r, echo = TRUE}
+tx_pop_df_spread_female <- 
+  tx_pop_df_spread %>% 
+  filter(female == 1)
+
+model_one <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+                        masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
+
+bptesteq = lm(residuals(model_one)*residuals(model_one) ~ 
+             (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+              masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
+
 summary(bptesteq)
+
 ```
+
 Again, because the p-value is so small, we reject the null hypothesis so that we have strong evidence to say that this model is heteroskedastic. 
 
+
+
 ```{r, echo=TRUE}
-model_two_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP), data = tx_pop_df_spread_female)
 
+model_two_log <- lm(LOG_WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+                                masters + professional + doctorate + AGEP + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
 
+bptesteq = lm(residuals(model_two_log) * residuals(model_two_log) ~ 
+             (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+              masters + professional + doctorate + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE), data = tx_pop_df_spread_female)
 
-bptesteq = lm(residuals(model_two_log)*residuals(model_two_log) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + (AGEP*AGEP), data = tx_pop_df_spread_female)
 summary(bptesteq)
 
 ```
 
 Since there is still heteroskedasticity, we will correct with the robust standard errors. 
 
+
 ```{r, echo = TRUE}
 #Generate robust standard errors
 
 vcovHC(model_two_log, type = "HC")
-modone_log_se <- diag(vcovHC(model_two_log, type = "HC"))^0.5
+modone_log_se <- diag(vcovHC(model_two_log, type = "HC")) ^ 0.5
 modone_log_se
+
+
 ```
 
 Our next models include marital status.
+
+
 ```{r, echo = TRUE}
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(MARITAL_STATUS, value, fill = 0)
 
-model_married_male <- lm(WAGE ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + MARITAL_STATUS, data = tx_pop_df_spread_male)
+tx_pop_df_spread_male <- 
+  tx_pop_df_spread %>% 
+  filter(male == 1)
 
-bptesteq = lm(residuals(model_married_male)*residuals(model_married_male) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + MARITAL_STATUS, data = tx_pop_df_spread_male)
+# Never married left out of model.
+model_married_male <- lm(WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+                                 masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
+                                 divorced + married + separated + widowed), data = tx_pop_df_spread_male)
+
+bptesteq = lm(residuals(model_married_male) * residuals(model_married_male) ~ 
+             (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+              masters + professional + doctorate + AGEP + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
+              divorced + married + separated + widowed), data = tx_pop_df_spread_male)
+
 summary(bptesteq)
 
 ```
+
 Because of the heteroskedasticity, we will take the log of the wage variable. 
 
+
 ```{r, echo = TRUE}
-model_male_log <- lm(log(WAGE, base = exp(1)) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + AGEP + I(AGEP*AGEP) + MARITAL_STATUS, data = tx_pop_df_spread_male)
+model_male_log <- lm(LOG_WAGE ~ (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+                                 masters + professional + doctorate + AGEP + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
+                                 divorced + married + separated + widowed), data = tx_pop_df_spread_male)
 
 
 
-bptesteq = lm(residuals(model_male_log)*residuals(model_male_log) ~ primary_education + ged_or_equivalent + some_college + associates + bachelors + masters + professional + doctorate + I(AGEP*AGEP) + MARITAL_STATUS , data = tx_pop_df_spread_male)
+bptesteq = lm(residuals(model_male_log) * residuals(model_male_log) ~ 
+             (primary_education + ged_or_equivalent + some_college + associates + bachelors + 
+              masters + professional + doctorate + AGEP ^ 2 + AFRICAN_AMERICAN + AMERICAN_INDIAN + WHITE +
+              divorced + married + separated + widowed), data = tx_pop_df_spread_male)
+
 summary(bptesteq)
 ```
+
 Generating robust standard errors:
+
 
 ```{r, echo = TRUE}
 vcovHC(model_male_log, type = "HC")
