@@ -17,9 +17,6 @@ In our initial EDA we found wide range of values for person earnings. Examining 
 
 
 ```{r, include = FALSE, warning = FALSE}
-# This is our first analysis of the LMA data. In this code we'll be
-# performing different statistical analyze, which is different from
-# the EDA code.
 library(tidyverse)
 library(here)
 library(gridExtra)
