@@ -1,0 +1,134 @@
+---
+title: "LMA Analysis Project"
+author: "Rylee Iacolucci"
+date: "February 6, 2019"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(here)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(formattable)
+library(scales)
+library(lmtest)
+library(sandwich)
+
+tx_pop_df <- read.csv(here("Data/tx_pop_data_v2.csv"))
+
+# This will be used to make vizualization standard
+basic_theme <- 
+  theme(legend.position = "none") +
+  theme(plot.title = element_text(size=16, face="bold", hjust=0, color="#000000")) +
+  theme(axis.title = element_text(size=12, face="bold", color="#000000")) +
+  theme(axis.title.y = element_text(angle=90)) +
+  theme(axis.title.x = element_text(hjust = .5)) +
+  theme_minimal() +
+  theme(axis.line = element_line(color = "#000000"),
+        axis.ticks = element_line(color = "#000000"),
+        axis.text = element_text(color = "#000000"))
+
+# Filter For Working Age Persons
+# $418,000 is the top code value for Texas
+tx_pop_df <- tx_pop_df %>% 
+  dplyr::filter(EMPLOYMENT_STATUS == 1 & WAGE > 15080 & WAGE < 418000 & AGEP >= 18 & AGEP < 62)
+
+# Original data source column names:
+# 
+# person_number: SPORDER
+# citizen_status: CIT
+# class_of_worker: COW
+# employment_status: ESR
+# person_earnings: PERNP
+# educational_attainment: SCHL
+# marital_status: MAR
+# times_married: MARHT
+
+tx_pop_df <- 
+  tx_pop_df %>% 
+  mutate(LOG_WAGE = log(WAGE),
+         SEX = if_else(SEX == 1, "male", "female"),
+         MARITAL_STATUS = if_else(MARITAL_STATUS == 1, "married", "single"),
+         EDUCATIONAL_ATTAINMENT = if_else(EDUCATIONAL_ATTAINMENT == 1, "no_schooling",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 16, "primary_education",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 18, "ged_or_equivalent",
+                                  if_else(EDUCATIONAL_ATTAINMENT < 20, "some_college",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 20, "associates",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 21, "bachelors",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 22, "masters",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 23, "professional",
+                                  if_else(EDUCATIONAL_ATTAINMENT == 24, "doctorate", "Other"))))))))),
+         RACE = if_else(RACE == 1, "WHITE",
+                if_else(RACE == 2, "BLACK", "OTHER")))
+
+# This takes the long dataset and makes it wide by taking the education 
+# columns and making them into their own column. I will do the same for
+# sex.
+tx_pop_df_spread <- 
+  tx_pop_df %>% 
+  mutate(value = 1) %>% 
+  spread(EDUCATIONAL_ATTAINMENT, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(SEX, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(RACE, value, fill = 0)
+
+tx_pop_df_spread <- 
+  tx_pop_df_spread %>% 
+  mutate(value = 1) %>% 
+  spread(MARITAL_STATUS, value, fill = 0)
+
+names(tx_pop_df_spread)[1:29] <- tolower(names(tx_pop_df_spread)[1:29])
+names(tx_pop_df)[1:17] <- tolower(names(tx_pop_df)[1:17])
+
+```
+
+
+## __Male Model__
+
+<br>
+
+```{r, echo=FALSE}
+
+tx_model_male <- 
+  tx_pop_df_spread %>% 
+  filter(male == 1)
+
+# Leaving out ged or equivalent
+# Leaving out other from race
+model_one_male <- lm(log_wage ~ (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
+                                 bachelors + masters + professional + doctorate + white + black), data = tx_model_male)
+
+summary(model_one_male)
+
+```
+
+<br>
+
+### __Male Model Explaination__
+ 
+<br>
+
+### __
+
+
+
+
+
+## __Female Model__
+
+
+
+
+
+
+
+
