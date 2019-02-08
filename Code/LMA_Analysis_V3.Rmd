@@ -146,8 +146,8 @@ model_one_male_coeff <-
   rownames_to_column(var = "var") %>% 
   rename(male_coefficients = `coefficients(model_one_male)`)
   
-model_one_male_p_val <- as.data.frame(summary(model_one_male)$)
-View(model_one_male_p_val)
+#model_one_male_p_val <- as.data.frame(summary(model_one_male)$)
+#View(model_one_male_p_val)
 
 male_summary <- 
   model_one_male_coeff %>% 
@@ -168,9 +168,30 @@ tx_model_female <-
 model_one_female <- lm(log_wage ~ (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
                                  bachelors + masters + professional + doctorate + white + black), data = tx_model_female)
 
+female_bpg_test <- lm(residuals(model_one_female) ^ 2 ~
+                   (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
+                    bachelors + masters + professional + doctorate + white + black), data = tx_model_female)
 
+model_one_female_se <- diag(vcovHC(model_one_male, type = "HC")) ^ 0.5
+model_one_female_se <- as.data.frame(model_one_female_se)
 
+model_one_female_se <- 
+  model_one_female_se %>% 
+  rownames_to_column(var = "var") %>% 
+  rename(female_model_se = model_one_female_se)
 
+model_one_female_coeff <- as.data.frame(coefficients(model_one_female))
+model_one_female_coeff <- 
+  model_one_female_coeff %>% 
+  rownames_to_column(var = "var") %>% 
+  rename(female_coefficients = `coefficients(model_one_female)`)
+  
+#model_one_male_p_val <- as.data.frame(summary(model_one_male)$)
+#View(model_one_male_p_val)
+
+female_summary <- 
+  model_one_female_coeff %>% 
+  inner_join(model_one_female_se, by = "var")
 
 
 ```
