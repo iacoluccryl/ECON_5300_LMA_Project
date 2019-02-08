@@ -146,9 +146,6 @@ model_one_male_coeff <-
   rownames_to_column(var = "var") %>% 
   rename(male_coefficients = `coefficients(model_one_male)`)
   
-#model_one_male_p_val <- as.data.frame(summary(model_one_male)$)
-#View(model_one_male_p_val)
-
 male_summary <- 
   model_one_male_coeff %>% 
   inner_join(model_one_male_se, by = "var")
