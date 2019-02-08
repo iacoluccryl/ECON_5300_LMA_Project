@@ -146,9 +146,19 @@ model_one_male_coeff <-
   rownames_to_column(var = "var") %>% 
   rename(male_coefficients = `coefficients(model_one_male)`)
   
+model_one_male_p_val <- as.data.frame(summary(model_one_male)$coeff[, "Pr(>|t|)"])
+model_one_male_p_val <- 
+  model_one_male_p_val %>% 
+  rownames_to_column(var = "var") %>% 
+  rename(pvalue = `summary(model_one_male)$coeff[, \"Pr(>|t|)\"]`)
+  
+
 male_summary <- 
   model_one_male_coeff %>% 
-  inner_join(model_one_male_se, by = "var")
+  inner_join(model_one_male_se, by = "var") %>% 
+  inner_join(model_one_male_p_val, by = "var") %>% 
+  mutate(pvalue = str_c(sprintf("%.6f", pvalue), " ***", sep = ""))
+
 
 
 
