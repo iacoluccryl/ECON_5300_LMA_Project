@@ -5,6 +5,18 @@ date: "February 6, 2019"
 output: html_document
 ---
 
+## __Research Questions__
+
+<br>
+
+Research Questions:
+
+* In Texas how do earnings vary by educational attainment?
+* How does the premium for education vary by marital status?
+
+<br>
+
+
 ```{r, include=FALSE}
 library(tidyverse)
 library(here)
@@ -92,11 +104,20 @@ names(tx_pop_df)[1:17] <- tolower(names(tx_pop_df)[1:17])
 ```
 
 
-## __Male Model__
+## __Labor Market Analysis Model__
 
 <br>
 
 ```{r, echo=FALSE}
+# TODO: Create a single table summarizing both models with robust standard errors.
+# TODO: Write out multivariate results of independent variables      
+# TODO: Write out economic significance of model
+# TODO: Graphs of (educational Attainment with avg wage by gender, graph premium for education by marital status)
+# 
+
+###########################################################################################################
+############################################## Male Model #################################################
+###########################################################################################################
 
 tx_model_male <- 
   tx_pop_df_spread %>% 
@@ -107,24 +128,57 @@ tx_model_male <-
 model_one_male <- lm(log_wage ~ (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
                                  bachelors + masters + professional + doctorate + white + black), data = tx_model_male)
 
-summary(model_one_male)
+male_bpg_test <- lm(residuals(model_one_male) ^ 2 ~
+                   (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
+                    bachelors + masters + professional + doctorate + white + black), data = tx_model_male)
+
+model_one_male_se <- diag(vcovHC(model_one_male, type = "HC")) ^ 0.5
+model_one_male_se <- as.data.frame(model_one_male_se)
+
+model_one_male_se <- 
+  model_one_male_se %>% 
+  rownames_to_column(var = "var") %>% 
+  rename(male_model_se = model_one_male_se)
+
+model_one_male_coeff <- as.data.frame(coefficients(model_one_male))
+model_one_male_coeff <- 
+  model_one_male_coeff %>% 
+  rownames_to_column(var = "var") %>% 
+  rename(male_coefficients = `coefficients(model_one_male)`)
+  
+model_one_male_p_val <- as.data.frame(summary(model_one_male)$)
+View(model_one_male_p_val)
+
+male_summary <- 
+  model_one_male_coeff %>% 
+  inner_join(model_one_male_se, by = "var")
+
+
+
+###########################################################################################################
+############################################# female Model ################################################
+###########################################################################################################
+
+tx_model_female <- 
+  tx_pop_df_spread %>% 
+  filter(male == 0)
+
+# Leaving out ged or equivalent
+# Leaving out other from race
+model_one_female <- lm(log_wage ~ (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
+                                 bachelors + masters + professional + doctorate + white + black), data = tx_model_female)
+
+
+
+
+
 
 ```
 
 <br>
 
-### __Male Model Explaination__
+### __Model Multivariate Results__
  
-<br>
-
-### __
-
-
-
-
-
-## __Female Model__
-
 
 
 
