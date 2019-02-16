@@ -193,12 +193,20 @@ model_one_female_coeff <-
   rownames_to_column(var = "var") %>% 
   rename(female_coefficients = `coefficients(model_one_female)`)
   
-#model_one_male_p_val <- as.data.frame(summary(model_one_male)$)
-#View(model_one_male_p_val)
+  
+model_one_female_p_val <- as.data.frame(summary(model_one_female)$coeff[, "Pr(>|t|)"])
+model_one_female_p_val <- 
+  model_one_female_p_val %>% 
+  rownames_to_column(var = "var") %>% 
+  rename(pvalue = `summary(model_one_female)$coeff[, \"Pr(>|t|)\"]`)
+  
 
 female_summary <- 
   model_one_female_coeff %>% 
-  inner_join(model_one_female_se, by = "var")
+  inner_join(model_one_female_se, by = "var") %>% 
+  inner_join(model_one_female_p_val, by = "var") %>% 
+  mutate(pvalue = str_c(sprintf("%.6f", pvalue), " ***", sep = ""))
+
 
 
 ```
@@ -208,9 +216,9 @@ female_summary <-
 ### __Model Multivariate Results__
  
 
+Female:
 
-
-
+Based on the above table, when holding all other variables constant, you can see that white females make on average 2.34% more than the reference variable, females of other races, and black females make 3.72% less. As expected, females with no schooling  and only primary school education make less than those with a GED. However, those with primary education make 22.22% less than those with a GED and no schooling makes 16.68% less. Females with some college, an associates degree, a bachelors degree, a master's degree, and a doctorate degree all make more than a female with a GED at an increasing rate. Compared to those with a GED, females with some college make 15.19% more, associates degrees; 27.55%, bachelor's degrees; 53.33% more, master's degree; 66.94% more, and doctorate degree; 84.68% more. We can see that for females, as greater educational attainment is achieved, earnings go up as well.  It is noteworthy to say that those with a professional degree make 94.79% more than those with a GED when holding all other variables constant. 
 
 
 
