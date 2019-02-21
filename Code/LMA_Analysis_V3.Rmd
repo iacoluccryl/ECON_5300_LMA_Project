@@ -201,7 +201,8 @@ Next, we'll examine the premiums of particular eductional attainments. There is 
 
 tx_model_female <- 
   tx_pop_df_spread %>% 
-  filter(male == 0)
+  filter(male == 0) %>% 
+  mutate(age_sq = agep ^ 2)
 
 # Leaving out ged or equivalent
 # Leaving out other from race
