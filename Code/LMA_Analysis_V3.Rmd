@@ -108,12 +108,7 @@ names(tx_pop_df)[1:17] <- tolower(names(tx_pop_df)[1:17])
 
 <br>
 
-```{r, echo=FALSE}
-# TODO: Create a single table summarizing both models with robust standard errors.
-# TODO: Write out multivariate results of independent variables      
-# TODO: Write out economic significance of model
-# TODO: Graphs of (educational Attainment with avg wage by gender, graph premium for education by marital status)
-# 
+```{r, echo=FALSE, fig.align="left"}
 
 ###########################################################################################################
 ############################################## Male Model #################################################
@@ -121,11 +116,12 @@ names(tx_pop_df)[1:17] <- tolower(names(tx_pop_df)[1:17])
 
 tx_model_male <- 
   tx_pop_df_spread %>% 
-  filter(male == 1)
+  filter(male == 1) %>% 
+  mutate(age_sq = agep ^ 2)
 
 # Leaving out ged or equivalent
 # Leaving out other from race
-model_one_male <- lm(log_wage ~ (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
+model_one_male <- lm(log_wage ~ (agep + age_sq + no_schooling + primary_education + some_college + associates + 
                                  bachelors + masters + professional + doctorate + white + black), data = tx_model_male)
 
 male_bpg_test <- lm(residuals(model_one_male) ^ 2 ~
@@ -157,10 +153,47 @@ male_summary <-
   model_one_male_coeff %>% 
   inner_join(model_one_male_se, by = "var") %>% 
   inner_join(model_one_male_p_val, by = "var") %>% 
-  mutate(pvalue = str_c(sprintf("%.6f", pvalue), " ***", sep = ""))
+  mutate(pvalue = str_c(sprintf("%.6f", pvalue), " ***", sep = "")) %>% 
+  rename(`Independent Variable` = var,
+         Coefficients = male_coefficients,
+         `Male Model SE` = male_model_se,
+         PValue = pvalue) %>% 
+  kable(align = c("l", "c", "c", "c")) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = F) %>% 
+  column_spec(1:4, color = "#000000") %>% 
+  add_header_above(c(" ", "Male Model Summary" = 3))
+
+male_summary
+
+```
+
+<br>
+
+### __Male Model Multivariate Results__
+
+<br>
+
+Breifly looking over the model results you'll notice that all variables are significant at the one percent level. Starting with Age holding all other variables constant every one additional year in age equates to __`r round((exp(.0148249) - 1) * 100, 2)`%__ increase in wage. Next, the most interesting education variable professional degrees, which shows that males with a this degree earning on average __`r round((exp(.7711983) - 1) * 100, 2)`%__ more than males with a ged or equivalent degree. Holding other variables constant a male with a bachelors degree earn __`r round((exp(.5001886) - 1) * 100, 2)`%__ more than males with ged or equivalent degrees. Next, holding all other variables constant males with masters degrees earn __`r round((exp(.6528217) - 1) * 100, 2)`%__ more than males with ged or equivalent degrees. Examining the race variables males who identify as black earn __`r round((exp(-.00990866) - 1) * 100, 2)`%__ less than males who identify as other holding all other variables constant.
+
+<br>
+
+### __Male Model Economic Significance__
+
+<br>
+
+To examine age further within the male model we've included an intervening variable labeled age_sq. taking the first derivative and setting the equation equal to zero we find the max age is __`r round (.07536 / 2 / .00073, 2)`__. We know this is a max since if you take the second derivative the equation is negative. This means that wage is increasing at a decreasing rate as males approach __`r round (.07536 / 2 / .00073, 2)`__ years old then decreases at an increasing rate thereafter. Additionally we can use this equation to compute the average expected earnings increase at different ages. For example, a male at age 30 is expected on average to receieve a __`r round(0.0753647 - 2 * (0.0007347 * 30), 4)`%__ increase in earnings for every one additional year in age while a male at age 50 is expected to earn __`r round(0.0753647 - 2 * (0.0007347 * 50), 4)`%__ more for every oen additional year in age.  
+
+<br>
+
+Next, we'll examine the premiums of particular eductional attainments. There is a __`r round((exp((.7410904 + .0984943) - (.7410904 - .0967994)) - 1) * 100, 2)`%__ premium for white males who have a professional degrees than black males who have professional degress. There is a __`r round((exp((.7410904 + .0984943) - (.7410904)) - 1) * 100, 2)`%__ premium for white males who have a professional degree over males who identify as other with a professional degree. Additionally, just looking at education there is a __`r round((exp(.7410904 - .6211521) - 1) * 100, 2)`%__ premium for males to who have professional degrees over males who have masters degrees. The more eductation one gets shows repeatedly to increase one's earning and there is even a __`r round((exp(.2211903 - .1428664) - 1) * 100, 2)`%__ premium for males having an associates degree over males with just some college.         
 
 
 
+
+
+<br>
+
+```{r, echo=FALSE}
 
 ###########################################################################################################
 ############################################# female Model ################################################
@@ -213,7 +246,7 @@ female_summary <-
 
 <br>
 
-### __Model Multivariate Results__
+### __Female Model Multivariate Results__
  
 
 Female:
