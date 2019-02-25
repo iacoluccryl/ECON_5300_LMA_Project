@@ -12,7 +12,7 @@ output: html_document
 Research Questions:
 
 * In Texas how do earnings vary by educational attainment?
-* How does the premium for education vary by marital status?
+* How does the premium for education vary by gender?
 
 <br>
 
@@ -149,6 +149,11 @@ Breifly looking over the model results you'll notice that all variables are sign
 
 <br>
 
+Breifly looking over the model results you'll notice that all variables are significant at the one percent level. Starting with Age holding all other variables constant every one additional year in age equates to __`r round((exp(.0148249) - 1) * 100, 2)`%__ increase in wage. Next, the most interesting education variable professional degrees, which shows that males with this degree earning on average __`r round((exp(.7711983) - 1) * 100, 2)`%__ more than males with a ged or equivalent degree. Holding other variables constant a male with a bachelors degree earn __`r round((exp(.5001886) - 1) * 100, 2)`%__ more than males with ged or equivalent degrees. Next, holding all other variables constant males with masters degrees earn __`r round((exp(.6528217) - 1) * 100, 2)`%__ more than males with ged or equivalent degrees. Examining the race variables males who identify as black earn __`r round((exp(-.00990866) - 1) * 100, 2)`%__ less than males who identify as other holding all other variables constant.
+
+
+<br>
+
 In our model we used the log of wage to help the data be normally distributed, however, we still tested for heteroskedasticity. To do so we performed a BPG test, which resulted in a pvalue near zero meaning there is strong evidence that heteroskedasticity is still present in the model. This led to calculating the robust standard errors for the male model. Those values can be referenced in the table below.
 
 <br>
@@ -169,7 +174,11 @@ model_one_male_se %>%
 
 <br>
 
+
 ### __Male Model Economic Significance__
+
+To examine age further within the male model we've included a quadratic variable labeled age_sq. Taking the first derivative and setting the equation equal to zero we find the max age is __`r round (.07536 / 2 / .00073, 2)`__. We know this is a max since if you take the second derivative the equation is negative. This means that wage is increasing at a decreasing rate as males approach __`r round (.07536 / 2 / .00073, 2)`__ years old then decreases at an increasing rate thereafter. Additionally we can use this equation to compute the average expected earnings increase at different ages. For example, a male at age 30 is expected on average to receieve a __`r round(0.0753647 - 2 * (0.0007347 * 30), 4)`%__ increase in earnings for every one additional year in age while a male at age 50 is expected to earn __`r round(0.0753647 - 2 * (0.0007347 * 50), 4)`%__ more for every oen additional year in age.  
+
 
 <br>
 
@@ -196,7 +205,7 @@ tx_model_female <-
 
 # Leaving out ged or equivalent
 # Leaving out other from race
-model_one_female <- lm(log_wage ~ (agep + agep ^ 2 + no_schooling + primary_education + some_college + associates + 
+model_one_female <- lm(log_wage ~ (agep + age_sq + no_schooling + primary_education + some_college + associates + 
                                  bachelors + masters + professional + doctorate + white + black), data = tx_model_female)
 
 female_bpg_test <- lm(residuals(model_one_female) ^ 2 ~
@@ -231,7 +240,7 @@ female_summary <-
   inner_join(model_one_female_p_val, by = "var") %>% 
   mutate(pvalue = str_c(sprintf("%.6f", pvalue), " ***", sep = ""))
 
-
+female_summary
 
 ```
 
@@ -244,5 +253,15 @@ Female:
 
 Based on the above table, when holding all other variables constant, you can see that white females make on average 2.34% more than the reference variable, females of other races, and black females make 3.72% less. As expected, females with no schooling  and only primary school education make less than those with a GED. However, those with primary education make 22.22% less than those with a GED and no schooling makes 16.68% less. Females with some college, an associates degree, a bachelors degree, a master's degree, and a doctorate degree all make more than a female with a GED at an increasing rate. Compared to those with a GED, females with some college make 15.19% more, associates degrees; 27.55%, bachelor's degrees; 53.33% more, master's degree; 66.94% more, and doctorate degree; 84.68% more. We can see that for females, as greater educational attainment is achieved, earnings go up as well.  It is noteworthy to say that those with a professional degree make 94.79% more than those with a GED when holding all other variables constant. 
 
+We have also included a quadratic variable for age, as age related to earnings does not model as a linear function. When taking the derivative in relation to age and setting it equal to zero, you can see that the maximum age is __`r round (.0507596 / 2 / .000487, 2)`__. This means that earnings are increasing at a decreasing rate until females reach the age of __`r round (.0507596 / 2 / .000487, 2)`__ and then decreases at an increasing rate. This result is very similar to that found of males which was less than one year different. 
+
+To examine further the difference between male and female earnings, we will apply it to a more real life setting. We will take a white person with the age of 52, which is very close to the maximum for both genders, and they both have professional degrees, which accounts for the biggest increase in age. For a female, aged 52 with a professional degree, their estimated earnings is  \$87,717.06. For a male, aged 52 with a professional degree, their estimated earnings is \$106,209.36. As you can see, that is almost a \$20,000 difference between male and female in the peak of their earnings. Taking a black person with the same criteria, we see that a black female with a professional degree is expected to earn \$82,138.67 and a black male with a professional degree is expected to earn \$87,367.17. While the difference between black males and females are not as extreme, the difference between white males and black males is almost \$20,000. 
 
 
+
+
+
+
+
+
+ __`r round (exp(9.1113428307	+ (52*0.0507596146) + (52^2 * -0.0004874347) + 0.9220896161 + -0.0387447236)	, 2)`__. For a male, aged 52 with a  professional degree, their estimated earnings is __`r round (exp(8.8012483	+ (52*0.0753647) + (52^2 * -0.0007347) + 0.7410904 + -0.0967994)	, 2)`__.
