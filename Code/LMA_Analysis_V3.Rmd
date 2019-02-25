@@ -133,7 +133,7 @@ model_one_male_se <- diag(vcovHC(model_one_male, type = "HC")) ^ 0.5
 model_one_male_se <- as.data.frame(model_one_male_se)
 
 
-tab_model(model_one_male, show.se = T, digits = 4)
+tab_model(model_one_male, show.se = "HC", show.ci = FALSE, p.style = "asterisk", digits = 4)
 
 
 
@@ -255,12 +255,11 @@ tab_model(model_one_female, show.se = "HC", show.ci = FALSE, p.style = "asterisk
 Female:
 
 Based on the above table, when holding all other variables constant, you can see that white females make on average 2.7% more than the reference variable, females of other races, and black females make 3.87% less. As expected, females with no schooling  and only primary school education make less than those with a GED. However, those with primary education make 23.78% less than those with a GED and no schooling makes 18.65% less. Females with some college, an associates degree, a bachelors degree, a master's degree, and a doctorate degree all make more than a female with a GED at an increasing rate. Compared to those with a GED, females with some college make 14.98% more, associates degrees; 26.40%, bachelor's degrees; 52.03% more, master's degree; 64.67% more, and doctorate degree; 82.01% more. We can see that for females, as greater educational attainment is achieved, earnings go up as well.  It is noteworthy to say that those with a professional degree make 94.79% more than those with a GED when holding all other variables constant. 
-
+<br>
 We have also included a quadratic variable for age, as age related to earnings does not model as a linear function. When taking the derivative in relation to age and setting it equal to zero, you can see that the maximum age is __`r round (.0507596 / 2 / .000487, 2)`__. This means that earnings are increasing at a decreasing rate until females reach the age of __`r round (.0507596 / 2 / .000487, 2)`__ and then decreases at an increasing rate. This result is very similar to that found of males which was less than one year different. 
-
+<br>
 To examine further the difference between male and female earnings, we will apply it to a more real life setting. We will take a white person with the age of 52, which is very close to the maximum for both genders, and they both have professional degrees, which accounts for the biggest increase in age. For a female, aged 52 with a professional degree, their estimated earnings is  \$87,717.06. For a male, aged 52 with a professional degree, their estimated earnings is \$106,209.36. As you can see, that is almost a \$20,000 difference between male and female in the peak of their earnings. Taking a black person with the same criteria, we see that a black female with a professional degree is expected to earn \$82,138.67 and a black male with a professional degree is expected to earn \$87,367.17. While the difference between black males and females are not as extreme, the difference between white males and black males is almost \$20,000. 
-
-
+<br>
 The table above shows the robust standard errors for the model. The original model tested for heteroskedasticity when using the Breusch-Pagan-Godfrey Test. To fix this, we used log(wage); however, the model still tested for heteroskedasticity. Since heteroskedasticity does not effect the magnitude of the model, the coefficients are still valid, but the standard errors are not. Because of this, robust standard errors were computed and displayed in the table. 
 
 
