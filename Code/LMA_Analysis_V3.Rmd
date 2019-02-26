@@ -29,6 +29,9 @@ library(lmtest)
 library(sandwich)
 library(sjPlot)
 library(stargazer)
+library(pastecs)
+library(GGally)
+library(MultinomialCI)
 
 tx_pop_df <- read.csv(here("Data/tx_pop_data_v2.csv"))
 
@@ -103,6 +106,18 @@ tx_pop_df_spread <-
 names(tx_pop_df_spread)[1:29] <- tolower(names(tx_pop_df_spread)[1:29])
 names(tx_pop_df)[1:17] <- tolower(names(tx_pop_df)[1:17])
 
+```
+
+```{r}
+t1 <-
+  tx_pop_df_spread %>% 
+  select(wage, agep, associates, bachelors, doctorate, ged_or_equivalent, masters, no_schooling, primary_education, professional, some_college, female, male, black, white, married) %>%
+  round(2) %>% 
+  kable(align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "bordered")) %>% 
+  column_spec(1:17, color = "#000000") %>% 
+
+t1
 ```
 
 
